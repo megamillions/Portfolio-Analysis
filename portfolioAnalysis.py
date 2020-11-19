@@ -34,7 +34,6 @@ prev_cost_basis = df['Prev position'].sum()
 df["Today's $ gain/loss"] = df['Position'] - df['Prev position']
 df["Today's % gain/loss"] = df["Today's $ gain/loss"] / df['Prev position']
 
-
 df['Total $ gain/loss'] = df['Position'] - df['Cost basis total']
 df['Total % gain/loss'] = df['Total $ gain/loss'] / df['Cost basis total']
 
@@ -97,3 +96,47 @@ print('Spread over benchmark:\n\t%s %s' %
 # Print total gain/loss.
 print('Total gain/loss:\n\t%s\n\t\t%s' %
       (as_dollar(total_d_gain), as_percentage(total_p_gain)))
+
+# TO DO print top 5 gainers
+
+# TO DO print bottom 5 gainers
+
+# TO DO performance as time series
+
+# Data to plot.
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+plt.style.use('ggplot')
+
+fig, axs = plt.subplots(2, 1, figsize=(5, 10))
+
+right_now = datetime.now()
+
+# Cash assumed to be ultimate value in index.
+axs[0].bar(df.index[:-1], df["Today's % gain/loss"][:-1])
+axs[0].set_title('Portfolio performance as of %s.' % right_now.strftime('%H:%M:%S %d/%m/%Y'))
+axs[0].set_xticklabels(df.index[:-1], rotation=90)
+axs[0].set_ylabel("Today's % gain/loss")
+
+vals = axs[0].get_yticks()
+axs[0].set_yticklabels(['{:.1%}'.format(x) for x in vals])
+
+# Show portfolio weighted average.
+axs[0].plot([0, df.index[:-1].shape[0]], [today_p_gain, today_p_gain],
+            '--', label='Your daily gain ' + str(as_percentage(today_p_gain)))
+
+# Align SPY benchmark.
+axs[0].plot([0, df.index[:-1].shape[0]], [benchmark_spy, benchmark_spy],
+            'k--', label='SPY daily gain ' + str(as_percentage(benchmark_spy)))
+
+axs[0].legend()
+
+axs[1].pie(df['Portfolio %'], labels=df.index, autopct='%1.1f%%', pctdistance=0.8)
+axs[1].set_title('Position as present share of portfolio.')
+
+fig.tight_layout()
+
+plt.show()
+
+# TO DO groupby facts
