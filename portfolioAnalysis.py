@@ -200,8 +200,26 @@ axs[0].plot([0, df.index[:-3].shape[0]], [benchmark_spy, benchmark_spy],
 
 axs[0].legend()
 
-# TO DO sort by order of %
-axs[1].pie(df['Portfolio %'][:-2], labels=df.index[:-2], autopct='%1.1f%%', pctdistance=0.8)
+# Sort by order of %.
+pie_data = df[:-2].copy()
+pie_data.sort_values(by=['Portfolio %'], inplace=True)
+
+# Explode the positions that satisfy the benchmark holdings.
+explosions = []
+
+for stock in pie_data.index:
+    if pie_data['Status'][stock] == 'X':
+        explosions.append(0.2)
+        
+    else:
+        explosions.append(0)
+
+# Plot pie chart.
+axs[1].pie(
+    pie_data['Portfolio %'], labels=pie_data.index, autopct='%1.1f%%',
+    explode=explosions, pctdistance=0.8, shadow=True, startangle=90
+    )
+
 axs[1].set_title('Position as present share of portfolio.')
 
 fig.tight_layout()
