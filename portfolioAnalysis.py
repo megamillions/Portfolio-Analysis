@@ -25,6 +25,13 @@ target_gain = 0.1
 # Subtract 1 for cash position.
 target_percentage = (1 / (df.shape[0] - 1)) + buffer
 
+# Formats number as dollar, percentage, etc, ready to print.
+def as_dollar(n):
+    return '${:,.2f}'.format(n)
+
+def as_percentage(n):
+    return '{:.2%}'.format(n)
+
 df['Cost basis total'] = df['Shares'] * df['Cost basis per share']
 
 cost_basis = df['Cost basis total'].sum()
@@ -46,33 +53,6 @@ df['Total % gain/loss'] = df['Total $ gain/loss'] / df['Cost basis total']
 portfolio_value = df['Position'].sum()
 
 df['Portfolio %'] = df['Position'].apply(lambda x: x / portfolio_value)
-
-# Day over day percentage change.
-low_deltas = []
-high_deltas = []
-
-for stock in df.index:
-    
-    if stock != 'Cash':
-        
-        # Get the stock's day range data.
-        day_range = si.get_quote_table(stock)["Day's Range"].split(' - ')
-
-        # Low range.
-        low = float(day_range[0])
-        low_delta = ((low * df['Shares'][stock]) - df['Prev position'][stock]) / df['Prev position'][stock]
-        low_deltas.append(low_delta)
-        
-        # High range.
-        high = float(day_range[1])
-        high_delta = ((high * df['Shares'][stock]) - df['Prev position'][stock]) / df['Prev position'][stock]
-        high_deltas.append(low_delta)
-    
-    # Cash will not be plotted.
-    else:
-        pass
-
-deltas = [low_deltas, high_deltas]
 
 # Gives indicator on whether to sell, to be alert, or to keep dreaming.
 def get_status(dataframe):
@@ -143,13 +123,6 @@ right_now = datetime.now()
 if write_csv:
     df.to_csv('Performance %s.csv' % right_now.strftime('%d-%m-%Y'))
 
-# Formats number as dollar, percentage, etc, ready to print.
-def as_dollar(n):
-    return '${:,.2f}'.format(n)
-
-def as_percentage(n):
-    return '{:.2%}'.format(n)
-
 print(df[['Latest price', 'Total % gain/loss', 'Portfolio %', 'Status']])
 print('Portfolio value:\n\t%s' % as_dollar(portfolio_value))
 print("Today's gain/loss value:\n\t%s\n\t\t%s" %
@@ -166,9 +139,26 @@ print('Spread over benchmark:\n\t%s %s' %
 print('Total gain/loss:\n\t%s\n\t\t%s' %
       (as_dollar(total_d_gain), as_percentage(total_p_gain)))
 
-# TO DO print top 5 gainers
+# Print top 5 gainers.
+top_gainers = df[:-2].copy()
 
-# TO DO print bottom 5 gainers
+def print_top_five():
+    for stock in top_gainers.index[:5]:
+        print('\t', stock, as_percentage(top_gainers['Today % gain/loss'][stock]))
+
+# Format database before running through function.
+top_gainers.sort_values(by=['Today % gain/loss'], ascending=False, inplace=True)
+
+print('Today\'s top 5 gainers:')
+
+print_top_five()
+
+# Print bottom 5 gainers.
+top_gainers.sort_values(by=['Today % gain/loss'], inplace=True)
+
+print('Today\'s bottom 5 gainers:')
+
+print_top_five()
 
 # TO DO performance as time series
 
@@ -177,10 +167,35 @@ plt.style.use('ggplot')
 
 fig, axs = plt.subplots(2, 1, figsize=(5, 10))
 
+# Sort by order of % to align with pie chart later.
+bar_data = df[:-3].copy()
+bar_data.sort_values(by=['Portfolio %'], ascending=False, inplace=True)
+
+# Day over day percentage change.
+low_deltas = []
+high_deltas = []
+
+for stock in bar_data.index:
+    
+    # Get the stock's day range data.
+    day_range = si.get_quote_table(stock)["Day's Range"].split(' - ')
+
+    # Low range.
+    low = float(day_range[0])
+    low_delta = abs(((low * bar_data['Shares'][stock]) - bar_data['Prev position'][stock]) / bar_data['Prev position'][stock])
+    low_deltas.append(low_delta)
+    
+    # High range.
+    high = float(day_range[1])
+    high_delta = abs(((high * bar_data['Shares'][stock]) - bar_data['Prev position'][stock]) / bar_data['Prev position'][stock])
+    high_deltas.append(high_delta)
+
+deltas = [low_deltas, high_deltas]
+
 # Cash, summary average, and summary total assumed to be ultimate values in index.
-axs[0].bar(df.index[:-3], df["Today % gain/loss"][:-3], yerr=deltas)
+axs[0].bar(bar_data.index, bar_data['Today % gain/loss'], yerr=deltas)
 axs[0].set_title('Portfolio performance as of %s.' % right_now.strftime('%H:%M:%S %d/%m/%Y'))
-axs[0].set_xticklabels(df.index[:-3], rotation=90)
+axs[0].set_xticklabels(bar_data.index, rotation=90)
 axs[0].set_ylabel("Today's gain/loss")
 
 # Clean up the axis labels.
@@ -191,11 +206,11 @@ axs[0].set_yticklabels(['{:.1%}'.format(x) for x in vals])
 benchmark_spy = df.loc['SPY', "Today % gain/loss"]
 today_p_gain = df.loc['Totals', 'Today % gain/loss']
 
-axs[0].plot([0, df.index[:-3].shape[0]], [today_p_gain, today_p_gain],
+axs[0].plot([0, bar_data.index.shape[0]], [today_p_gain, today_p_gain],
             'r--', label='Your daily gain ' + str(as_percentage(today_p_gain)))
 
 # Align SPY benchmark.
-axs[0].plot([0, df.index[:-3].shape[0]], [benchmark_spy, benchmark_spy],
+axs[0].plot([0, bar_data.index.shape[0]], [benchmark_spy, benchmark_spy],
             'k--', label='SPY daily gain ' + str(as_percentage(benchmark_spy)))
 
 axs[0].legend()
