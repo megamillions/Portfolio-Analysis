@@ -55,21 +55,25 @@ portfolio_value = df['Position'].sum()
 df['Portfolio %'] = df['Position'].apply(lambda x: x / portfolio_value)
 
 # Gives indicator on whether to sell, to be alert, or to keep dreaming.
+status_go = 'X'
+status_slow =  '/'
+status_trouble = 'o'
+
 def get_status(dataframe):
 
     if dataframe['Portfolio %'] > target_percentage:
         
         if dataframe['Total % gain/loss'] > target_gain:
-            return 'X'
+            return status_go
         
         elif dataframe['Total % gain/loss'] > 0:
-            return '/'
+            return status_slow
         
         else:
-            return 'o'
+            return status_trouble
         
     else:
-        return ''
+        return None
 
 df['Status'] = df.apply(get_status, axis=1)
 
@@ -172,27 +176,34 @@ bar_data = df[:-3].copy()
 bar_data.sort_values(by=['Portfolio %'], ascending=False, inplace=True)
 
 # Day over day percentage change.
-low_deltas = []
-high_deltas = []
+low_errors = []
+high_errors = []
 
 for stock in bar_data.index:
     
     # Get the stock's day range data.
-    day_range = si.get_quote_table(stock)["Day's Range"].split(' - ')
+    stock_table = si.get_quote_table(stock)
+    day_range = stock_table["Day's Range"].split(' - ')
+    prev_close = stock_table['Previous Close']
 
     # Low range.
     low = float(day_range[0])
-    low_delta = abs(((low * bar_data['Shares'][stock]) - bar_data['Prev position'][stock]) / bar_data['Prev position'][stock])
-    low_deltas.append(low_delta)
+    low_delta = (low - prev_close) / prev_close
+    low_error = df['Today % gain/loss'][stock] - low_delta
+    print(stock, low_error)
+    low_errors.append(low_error)
     
     # High range.
     high = float(day_range[1])
-    high_delta = abs(((high * bar_data['Shares'][stock]) - bar_data['Prev position'][stock]) / bar_data['Prev position'][stock])
-    high_deltas.append(high_delta)
+    high_delta = (high - prev_close) / prev_close
+    high_error = high_delta - df['Today % gain/loss'][stock]
+    print(stock, high_error)
+    high_errors.append(high_error)
 
-deltas = [low_deltas, high_deltas]
+deltas = [low_errors, high_errors]
 
-# Cash, summary average, and summary total assumed to be ultimate values in index.
+# Cash, summary average, and summary total assumed to be
+# the ultimate values in index.
 axs[0].bar(bar_data.index, bar_data['Today % gain/loss'], yerr=deltas)
 axs[0].set_title('Portfolio performance as of %s.' % right_now.strftime('%H:%M:%S %d/%m/%Y'))
 axs[0].set_xticklabels(bar_data.index, rotation=90)
@@ -203,7 +214,7 @@ vals = axs[0].get_yticks()
 axs[0].set_yticklabels(['{:.1%}'.format(x) for x in vals])
 
 # Show portfolio weighted average.
-benchmark_spy = df.loc['SPY', "Today % gain/loss"]
+benchmark_spy = df.loc['SPY', 'Today % gain/loss']
 today_p_gain = df.loc['Totals', 'Today % gain/loss']
 
 axs[0].plot([0, bar_data.index.shape[0]], [today_p_gain, today_p_gain],
@@ -223,7 +234,7 @@ pie_data.sort_values(by=['Portfolio %'], inplace=True)
 explosions = []
 
 for stock in pie_data.index:
-    if pie_data['Status'][stock] == 'X':
+    if pie_data['Status'][stock] == status_go:
         explosions.append(0.2)
         
     else:
