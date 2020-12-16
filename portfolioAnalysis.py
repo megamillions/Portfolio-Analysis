@@ -15,8 +15,7 @@ df = pd.DataFrame(portfolio)
 df.set_index('Stock', inplace = True)
 
 # Will save dataframe as csv or plot as png - adjust as needed.
-write_csv = True
-write_plot = True
+write_output = True
 
 # Measurements for individual stocks.
 buffer = 0.005
@@ -123,53 +122,12 @@ df.loc['Totals'] = {'Shares' : df['Shares'][:-1].sum(),
 
 right_now = datetime.now()
 
-# Save today's portfolio as a csv.
-if write_csv:
-    df.to_csv('Performance %s.csv' % right_now.strftime('%d-%m-%Y'))
-
-print(df[['Latest price', 'Total % gain/loss', 'Portfolio %', 'Status']])
-print('Portfolio value:\n\t%s' % as_dollar(portfolio_value))
-print("Today's gain/loss value:\n\t%s\n\t\t%s" %
-      (as_dollar(today_d_gain), as_percentage(today_p_gain)))
-
-benchmark_spy = df.loc['SPY', "Today % gain/loss"]
-
-# Show portfolio daily weighted gain against benchmark daily gain, e.g. SPY.
-print('Benchmark:\n\t%s %s' % ('SPY', as_percentage(benchmark_spy)))
-print('Spread over benchmark:\n\t%s %s' %
-      ('SPY', as_percentage(today_p_gain - benchmark_spy)))
-
-# Print total gain/loss.
-print('Total gain/loss:\n\t%s\n\t\t%s' %
-      (as_dollar(total_d_gain), as_percentage(total_p_gain)))
-
-# Print top 5 gainers.
-top_gainers = df[:-2].copy()
-
-def print_top_five():
-    for stock in top_gainers.index[:5]:
-        print('\t', stock, as_percentage(top_gainers['Today % gain/loss'][stock]))
-
-# Format database before running through function.
-top_gainers.sort_values(by=['Today % gain/loss'], ascending=False, inplace=True)
-
-print('Today\'s top 5 gainers:')
-
-print_top_five()
-
-# Print bottom 5 gainers.
-top_gainers.sort_values(by=['Today % gain/loss'], inplace=True)
-
-print('Today\'s bottom 5 gainers:')
-
-print_top_five()
-
 # TO DO performance as time series
 
 # Data to plot.
 plt.style.use('ggplot')
 
-fig, axs = plt.subplots(2, 1, figsize=(5, 10))
+fig, axs = plt.subplots(2, 1, figsize=(8, 10))
 
 # Sort by order of % to align with pie chart later.
 bar_data = df[:-3].copy()
@@ -190,14 +148,14 @@ for stock in bar_data.index:
     low = float(day_range[0])
     low_delta = (low - prev_close) / prev_close
     low_error = df['Today % gain/loss'][stock] - low_delta
-    print(stock, low_error)
+
     low_errors.append(low_error)
     
     # High range.
     high = float(day_range[1])
     high_delta = (high - prev_close) / prev_close
     high_error = high_delta - df['Today % gain/loss'][stock]
-    print(stock, high_error)
+
     high_errors.append(high_error)
 
 deltas = [low_errors, high_errors]
@@ -248,11 +206,68 @@ axs[1].pie(
 
 axs[1].set_title('Position as present share of portfolio.')
 
-fig.tight_layout()
+plt.tight_layout()
+plt.subplots_adjust(right=0.7)
+
+# Annotate with some delicious factoids.
+def add_annotation(annotation, y_placement):
+   plt.annotate(annotation, (0.725, y_placement), xycoords='figure fraction')
+
+add_annotation('Portfolio value: %s' % as_dollar(portfolio_value), 0.95)
+add_annotation("Today's gain/loss value:\n%s    %s" %
+      (as_dollar(today_d_gain), as_percentage(today_p_gain)), 0.9)
+
+benchmark_spy = df.loc['SPY', "Today % gain/loss"]
+
+# Show portfolio daily weighted gain against benchmark daily gain, e.g. SPY.
+add_annotation('Benchmark:\n%s %s' % ('SPY', as_percentage(benchmark_spy)), 0.85)
+add_annotation('Spread over benchmark:\n%s' %
+               as_percentage(today_p_gain - benchmark_spy), 0.8)
+
+# Print total gain/loss.
+add_annotation('Total gain/loss:\n%s    %s' %
+               (as_dollar(total_d_gain), as_percentage(total_p_gain)), 0.75)
+
+# Print top 5 gainers.
+top_gainers = df[:-3].copy()
+
+# Format database before running through function.
+top_gainers.sort_values(by=['Today % gain/loss'], ascending=False, inplace=True)
+
+top_count = 0.7
+
+add_annotation('Today\'s top 5 gainers:', top_count)
+
+for stock in top_gainers.index[:5]:
+    
+    top_count -= 0.02
+    
+    add_annotation('%s %s' %
+                   (stock, as_percentage(top_gainers['Today % gain/loss'][stock])),
+                   top_count)
+
+# Transform top gainers into bottom gainers.
+top_gainers.sort_values(by=['Today % gain/loss'], inplace=True)
+
+bot_count = 0.55
+
+add_annotation('Today\'s bottom 5 gainers:', bot_count)
+
+for stock in top_gainers.index[:5]:
+    
+    bot_count -= 0.02
+    
+    add_annotation('%s %s' %
+                   (stock, as_percentage(top_gainers['Today % gain/loss'][stock])),
+                   bot_count)
+
+print(df[['Latest price', 'Total % gain/loss', 'Portfolio %', 'Status']])
 
 # TO DO groupby facts, like industry
 
-if write_plot:
+# Save today's portfolio and image as a csv and png.
+if write_output:
+    df.to_csv('Performance %s.csv' % right_now.strftime('%d-%m-%Y'))
     plt.savefig('Performance %s.png' % right_now.strftime('%d-%m-%Y'))
     
 else:
