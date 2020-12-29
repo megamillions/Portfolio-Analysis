@@ -160,9 +160,20 @@ for stock in bar_data.index:
 
 deltas = [low_errors, high_errors]
 
+# Create list of colors to map to chart whether bar is positive.
+color_map = []
+
+for stock in bar_data.index:
+    
+    if bar_data['Today % gain/loss'][stock] > 0:
+        color_map.append('xkcd:kelly green')
+        
+    else:
+        color_map.append('xkcd:coral')
+
 # Cash, summary average, and summary total assumed to be
 # the ultimate values in index.
-axs[0].bar(bar_data.index, bar_data['Today % gain/loss'], yerr=deltas)
+axs[0].bar(bar_data.index, bar_data['Today % gain/loss'], color=color_map, yerr=deltas)
 axs[0].set_title('Portfolio performance as of %s.' % right_now.strftime('%H:%M:%S %d/%m/%Y'))
 axs[0].set_xticklabels(bar_data.index, rotation=90)
 axs[0].set_ylabel("Today's gain/loss")
