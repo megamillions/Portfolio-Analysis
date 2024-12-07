@@ -6,3 +6,9 @@ Before running script, populate the directory with a csv file with the following
 * Stock
 * Shares
 * Cost basis per share
+
+## IMPORTANT
+
+Scripts placed in the Obsolete folder use an older module of Yahoo Finance.
+
+Performance not guaranteed. Included as reference material.

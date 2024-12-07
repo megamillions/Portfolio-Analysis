@@ -1,5 +1,5 @@
 #! python3
-# portfolioAnalysis.py - Analyze a stock portfolio using
+# performanceAnalysis.py - Analyze a stock's performance in a portfolio using
 # up-to-date information from Yahoo Finance. Before running script, populate
 # directory with csv with the following columns:
 # 'Stock', 'Shares', 'Cost basis per share'

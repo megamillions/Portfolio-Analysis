@@ -1,0 +1,7 @@
+# Various output and reference folders.
+**/Recommendations
+**/Reference
+
+# Various cache files.
+**/__pycache__
+**/geckodriver.log
