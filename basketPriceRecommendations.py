@@ -10,12 +10,13 @@ import yfinance as yf
 file_path = '.\\Reference\\%s'
 file_name = 'stocks.csv'
 
-# Dollar amount of single unit.
-ira_unit = 40
-invest_unit = ira_unit * 0.5
+# Dollar amount of single unit, taken as the sum of all expected sells.
+# Recalculate on 2025-02-01 after completing disbursal of BWA.
+ira_unit = 69.71
+invest_unit = 38.46
 
-ira_sell_unit = ira_unit * 0.5
-invest_sell_unit = invest_unit * 0.5
+ira_sell_unit = 20
+invest_sell_unit = ira_sell_unit * 0.5
 
 df = pd.read_csv(os.path.abspath(file_path %
                                  file_name)).sort_values(by = 'TICKER')
@@ -38,21 +39,30 @@ def print_recommendations(df, recommendation, account,
 
 def recommend_amount(row):
 
-    # Get the closing price.
-    price = yf.Ticker(row['TICKER']).history().iloc[-1]['Close']
-    
-    invest_buy_share = shares_amount(invest_unit, row['INVEST_BUY'], price)
-    ira_buy_share = shares_amount(ira_unit, row['IRA_BUY'], price)
-    
-    invest_sell_share = shares_amount(invest_sell_unit, row['INVEST_SELL'], price)
-    ira_sell_share = shares_amount(ira_sell_unit, row['IRA_SELL'], price)
+    try:
+
+        # Get the closing price.
+        price = yf.Ticker(row['TICKER']).history().iloc[-1]['Close']
         
-    return {'TICKER' : row['TICKER'],
-            'PRICE' : price,
-            'INVEST_BUY_SHARES' : invest_buy_share,
-            'IRA_BUY_SHARES' : ira_buy_share,
-            'INVEST_SELL_SHARES' : invest_sell_share,
-            'IRA_SELL_SHARES' : ira_sell_share}
+        invest_buy_share = shares_amount(invest_unit, row['INVEST_BUY'],
+                                         price)
+        ira_buy_share = shares_amount(ira_unit, row['IRA_BUY'],
+                                      price)
+        
+        invest_sell_share = shares_amount(invest_sell_unit, row['INVEST_SELL'],
+                                          price)
+        ira_sell_share = shares_amount(ira_sell_unit, row['IRA_SELL'],
+                                       price)
+            
+        return {'TICKER' : row['TICKER'],
+                'PRICE' : price,
+                'INVEST_BUY_SHARES' : invest_buy_share,
+                'IRA_BUY_SHARES' : ira_buy_share,
+                'INVEST_SELL_SHARES' : invest_sell_share,
+                'IRA_SELL_SHARES' : ira_sell_share}
+    
+    except IndexError as e:
+        print('Error encountered on %s: %s' % (row['TICKER'], e))
 
 # Returns the amount of shares to buy or sell.
 def shares_amount(units, basket_size, price):
